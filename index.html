@@ -1,97 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Cricket Score Tracker PWA</title>
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" type="image/x-icon" href="favicon.ico" />
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; background: #f0f8ff; }
-  button { margin: 5px; padding: 10px; font-size: 16px; }
-  #log { margin-top: 20px; background: #fff; padding: 10px; border: 1px solid #ccc; height: 200px; overflow-y: auto; }
-</style>
-<script>
-let match = null;
-
-function log(message) {
-  const logDiv = document.getElementById("log");
-  logDiv.innerHTML += message + "<br>";
-  logDiv.scrollTop = logDiv.scrollHeight;
-}
-
-function registerUser() {
-  const username = prompt("Enter username:");
-  if (!username) return alert("Username required");
-  const password = prompt("Enter password:");
-  if (!password) return alert("Password required");
-  // Simulate registration
-  log(`User '${username}' registered`);
-}
-
-function loginUser() {
-  const username = prompt("Enter username:");
-  if (!username) return alert("Username required");
-  const password = prompt("Enter password:");
-  if (!password) return alert("Password required");
-  // Simulate login success
-  log(`User '${username}' logged in`);
-  // In real app, store session/token
-}
-
-function startMatch() {
-  match = { players: {}, balls: [], currentStriker: null };
-  log("New match started");
-}
-
-function addPlayer() {
-  if (!match) return alert("Start a match first.");
-  const playerName = prompt("Enter player name:");
-  if (!playerName) return alert("Player name required");
-  if (playerName in match.players) return alert("Player already exists");
-  match.players[playerName] = 0;
-  log(`Player '${playerName}' added`);
-}
-
-function recordBall() {
-  if (!match) return alert("Start a match first.");
-  const striker = prompt("Enter striker name:");
-  if (!(striker in match.players)) return alert("Player not found");
-  const runs = parseInt(prompt("Enter runs scored:"), 10);
-  if (isNaN(runs)) return alert("Enter a valid number");
-  match.players[striker] += runs;
-  match.balls.push({ striker, runs });
-  match.currentStriker = striker;
-  log(`${striker} scored ${runs} run(s)`);
-}
-
-function endInnings() {
-  if (!match) return alert("Start a match first.");
-  log("Innings ended. Summary:");
-  for (const player in match.players) {
-    log(`- ${player}: ${match.players[player]} runs`);
-  }
-  match = null;
-}
-</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cricket Score App</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.ico">
+  <style>
+    body { font-family: Arial; padding: 1em; background: #f8f9fa; }
+    .scoreboard, .controls { margin-top: 1em; }
+    button { margin: 0.25em; padding: 0.5em 1em; font-size: 1em; }
+    select, input { padding: 0.5em; }
+    #summary, #history { background: #fff; border: 1px solid #ccc; padding: 1em; margin-top: 1em; }
+    #history { display: none; }
+  </style>
 </head>
 <body>
-<h1>Cricket Score Tracker PWA</h1>
-<button onclick="registerUser()">Register</button>
-<button onclick="loginUser()">Login</button>
-<button onclick="startMatch()">Start Match</button>
-<button onclick="addPlayer()">Add Player</button>
-<button onclick="recordBall()">Record Ball</button>
-<button onclick="endInnings()">End Innings</button>
-<div id="log"></div>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js')
-      .then(() => console.log('Service Worker Registered'))
-      .catch(e => console.log('Service Worker Registration failed', e));
-    });
-  }
-</script>
+  <h1>🏏 Cricket Score App</h1>
+
+  <div>
+    <input id="playerName" placeholder="Player Name">
+    <button onclick="addPlayer()">Add Player</button>
+  </div>
+
+  <div>
+    <label for="strikerSelect">Striker:</label>
+    <select id="strikerSelect"></select>
+  </div>
+
+  <div class="controls">
+    <p>Runs:</p>
+    <div id="runButtons"></div>
+  </div>
+
+  <div class="scoreboard">
+    <h3>Scoreboard</h3>
+    <ul id="scoreboard"></ul>
+  </div>
+
+  <button onclick="endInnings()">End Innings</button>
+  <button onclick="viewHistory()">View History</button>
+
+  <div id="summary"></div>
+  <div id="history"></div>
+
+  <script>
+    let matchHistory = JSON.parse(localStorage.getItem('matchHistory')) || [];
+    let match = JSON.parse(localStorage.getItem('match')) || { players: {}, balls: [], striker: null };
+
+    function saveMatch() {
+      localStorage.setItem('match', JSON.stringify(match));
+    }
+
+    function addPlayer() {
+      const name = document.getElementById('playerName').value.trim();
+      if (!name || match.players[name]) return alert('Invalid or duplicate name');
+      match.players[name] = 0;
+      const option = new Option(name, name);
+      document.getElementById('strikerSelect').add(option);
+      document.getElementById('playerName').value = '';
+      saveMatch();
+      updateScoreboard();
+    }
+
+    function recordRun(runs) {
+      const striker = document.getElementById('strikerSelect').value;
+      if (!striker) return alert('Please select a striker');
+      match.players[striker] += runs;
+      match.balls.push({ striker, runs });
+      saveMatch();
+      updateScoreboard();
+    }
+
+    function updateScoreboard() {
+      const ul = document.getElementById('scoreboard');
+      ul.innerHTML = '';
+      for (const [player, score] of Object.entries(match.players)) {
+        const li = document.createElement('li');
+        li.textContent = `${player}: ${score} runs`;
+        ul.appendChild(li);
+      }
+    }
+
+    function endInnings() {
+      match.date = new Date().toLocaleString();
+      matchHistory.push(match);
+      localStorage.setItem('matchHistory', JSON.stringify(matchHistory));
+
+      let summaryHTML = `<h3>Innings Summary</h3><ul>`;
+      for (const [player, score] of Object.entries(match.players)) {
+        summaryHTML += `<li>${player}: ${score} runs</li>`;
+      }
+      summaryHTML += '</ul>';
+
+      const maxScorer = Object.entries(match.players).reduce((a, b) => b[1] > a[1] ? b : a, ['', 0]);
+      summaryHTML += `<p><strong>Top Scorer:</strong> ${maxScorer[0]} (${maxScorer[1]} runs)</p>`;
+
+      document.getElementById('summary').innerHTML = summaryHTML;
+      document.getElementById('summary').style.display = 'block';
+
+      localStorage.removeItem('match');
+      match = { players: {}, balls: [], striker: null };
+      document.getElementById('strikerSelect').innerHTML = '';
+      updateScoreboard();
+    }
+
+    function viewHistory() {
+      const container = document.getElementById('history');
+      if (!matchHistory.length) {
+        container.innerHTML = '<p>No match history found.</p>';
+        container.style.display = 'block';
+        return;
+      }
+
+      let historyHTML = `<h3>Match History</h3>`;
+      matchHistory.forEach((match, index) => {
+        historyHTML += `<div style="margin-bottom: 1em;">
+          <strong>Match ${index + 1} - ${match.date || 'No date'}</strong>
+          <ul>`;
+        for (const [player, score] of Object.entries(match.players)) {
+          historyHTML += `<li>${player}: ${score} runs</li>`;
+        }
+        historyHTML += `</ul></div>`;
+      });
+
+      container.innerHTML = historyHTML;
+      container.style.display = 'block';
+    }
+
+    function createRunButtons() {
+      const runButtonsDiv = document.getElementById('runButtons');
+      for (let i = 0; i <= 12; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.onclick = () => recordRun(i);
+        runButtonsDiv.appendChild(btn);
+      }
+    }
+
+    window.onload = () => {
+      const strikerSelect = document.getElementById('strikerSelect');
+      for (const player of Object.keys(match.players)) {
+        strikerSelect.add(new Option(player, player));
+      }
+      updateScoreboard();
+      createRunButtons();
+    }
+  </script>
 </body>
 </html>
