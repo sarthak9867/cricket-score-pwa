@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cricket Score Tracker PWA</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/x-icon" href="favicon.ico" />
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f0f8ff; }
+  button { margin: 5px; padding: 10px; font-size: 16px; }
+  #log { margin-top: 20px; background: #fff; padding: 10px; border: 1px solid #ccc; height: 200px; overflow-y: auto; }
+</style>
+<script>
+let match = null;
+
+function log(message) {
+  const logDiv = document.getElementById("log");
+  logDiv.innerHTML += message + "<br>";
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function registerUser() {
+  const username = prompt("Enter username:");
+  if (!username) return alert("Username required");
+  const password = prompt("Enter password:");
+  if (!password) return alert("Password required");
+  // Simulate registration
+  log(`User '${username}' registered`);
+}
+
+function loginUser() {
+  const username = prompt("Enter username:");
+  if (!username) return alert("Username required");
+  const password = prompt("Enter password:");
+  if (!password) return alert("Password required");
+  // Simulate login success
+  log(`User '${username}' logged in`);
+  // In real app, store session/token
+}
+
+function startMatch() {
+  match = { players: {}, balls: [], currentStriker: null };
+  log("New match started");
+}
+
+function addPlayer() {
+  if (!match) return alert("Start a match first.");
+  const playerName = prompt("Enter player name:");
+  if (!playerName) return alert("Player name required");
+  if (playerName in match.players) return alert("Player already exists");
+  match.players[playerName] = 0;
+  log(`Player '${playerName}' added`);
+}
+
+function recordBall() {
+  if (!match) return alert("Start a match first.");
+  const striker = prompt("Enter striker name:");
+  if (!(striker in match.players)) return alert("Player not found");
+  const runs = parseInt(prompt("Enter runs scored:"), 10);
+  if (isNaN(runs)) return alert("Enter a valid number");
+  match.players[striker] += runs;
+  match.balls.push({ striker, runs });
+  match.currentStriker = striker;
+  log(`${striker} scored ${runs} run(s)`);
+}
+
+function endInnings() {
+  if (!match) return alert("Start a match first.");
+  log("Innings ended. Summary:");
+  for (const player in match.players) {
+    log(`- ${player}: ${match.players[player]} runs`);
+  }
+  match = null;
+}
+</script>
+</head>
+<body>
+<h1>Cricket Score Tracker PWA</h1>
+<button onclick="registerUser()">Register</button>
+<button onclick="loginUser()">Login</button>
+<button onclick="startMatch()">Start Match</button>
+<button onclick="addPlayer()">Add Player</button>
+<button onclick="recordBall()">Record Ball</button>
+<button onclick="endInnings()">End Innings</button>
+<div id="log"></div>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('Service Worker Registered'))
+      .catch(e => console.log('Service Worker Registration failed', e));
+    });
+  }
+</script>
+</body>
+</html>
