@@ -6,43 +6,124 @@
   <title>Cricket Score App</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial; padding: 1em; background: #f8f9fa; }
-    .scoreboard, .controls { margin-top: 1em; }
-    button { margin: 0.25em; padding: 0.5em 1em; font-size: 1em; }
-    select, input { padding: 0.5em; }
-    #summary, #history { background: #fff; border: 1px solid #ccc; padding: 1em; margin-top: 1em; }
-    #history { display: none; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f1f3f6;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #0d6efd;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card h3 {
+      margin-bottom: 10px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    input, select {
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      flex: 1;
+    }
+
+    button {
+      background: #0d6efd;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+
+    button:hover {
+      background: #084cd3;
+    }
+
+    #runButtons button {
+      margin: 5px;
+      background: #198754;
+    }
+
+    #runButtons button:hover {
+      background: #146c43;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    #summary, #history {
+      margin-top: 20px;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .input-group {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>🏏 Cricket Score App</h1>
+  <h1>🏏 Cricket Score Tracker</h1>
 
-  <div>
-    <input id="playerName" placeholder="Player Name">
-    <button onclick="addPlayer()">Add Player</button>
+  <div class="card">
+    <div class="input-group">
+      <input id="playerName" placeholder="Enter Player Name">
+      <button onclick="addPlayer()">Add Player</button>
+    </div>
+
+    <div class="input-group">
+      <select id="strikerSelect"></select>
+    </div>
+
+    <div id="runButtons" class="text-center"></div>
   </div>
 
-  <div>
-    <label for="strikerSelect">Striker:</label>
-    <select id="strikerSelect"></select>
-  </div>
-
-  <div class="controls">
-    <p>Runs:</p>
-    <div id="runButtons"></div>
-  </div>
-
-  <div class="scoreboard">
+  <div class="card">
     <h3>Scoreboard</h3>
     <ul id="scoreboard"></ul>
+    <div class="text-center">
+      <button onclick="undoLastBall()">Undo Last Ball</button>
+      <button onclick="endInnings()">End Innings</button>
+      <button onclick="viewHistory()">View History</button>
+    </div>
   </div>
 
-  <button onclick="endInnings()">End Innings</button>
-  <button onclick="viewHistory()">View History</button>
-
-  <div id="summary"></div>
-  <div id="history"></div>
+  <div id="summary" class="card" style="display:none;"></div>
+  <div id="history" class="card" style="display:none;"></div>
 
   <script>
     let matchHistory = JSON.parse(localStorage.getItem('matchHistory')) || [];
@@ -72,14 +153,27 @@
       updateScoreboard();
     }
 
+    function undoLastBall() {
+      const last = match.balls.pop();
+      if (!last) return;
+      match.players[last.striker] -= last.runs;
+      saveMatch();
+      updateScoreboard();
+    }
+
     function updateScoreboard() {
       const ul = document.getElementById('scoreboard');
       ul.innerHTML = '';
+      let totalRuns = 0;
       for (const [player, score] of Object.entries(match.players)) {
+        totalRuns += score;
         const li = document.createElement('li');
         li.textContent = `${player}: ${score} runs`;
         ul.appendChild(li);
       }
+      const total = document.createElement('li');
+      total.innerHTML = `<strong>Total Runs: ${totalRuns}</strong>`;
+      ul.appendChild(total);
     }
 
     function endInnings() {
@@ -130,6 +224,7 @@
 
     function createRunButtons() {
       const runButtonsDiv = document.getElementById('runButtons');
+      runButtonsDiv.innerHTML = '';
       for (let i = 0; i <= 12; i++) {
         const btn = document.createElement('button');
         btn.textContent = i;
