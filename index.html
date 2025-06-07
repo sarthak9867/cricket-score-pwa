@@ -6,128 +6,101 @@
   <title>Cricket Score App</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
     body {
-      font-family: 'Poppins', sans-serif;
-      background: #f1f3f6;
-      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 1em;
+      background: #f2f2f2;
       color: #333;
     }
-
     h1 {
       text-align: center;
-      margin-bottom: 20px;
-      color: #0d6efd;
+      color: #0275d8;
     }
-
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      padding: 20px;
-      margin-bottom: 20px;
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 1.5em;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
-
-    .card h3 {
-      margin-bottom: 10px;
-    }
-
-    .input-group {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    input, select {
-      padding: 10px;
+    input, select, button {
+      padding: 0.5em;
+      margin: 0.5em 0;
       font-size: 1em;
       border: 1px solid #ccc;
-      border-radius: 6px;
-      flex: 1;
+      border-radius: 5px;
+      width: 100%;
     }
-
     button {
-      background: #0d6efd;
+      background-color: #0275d8;
       color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
       cursor: pointer;
-      font-size: 1em;
     }
-
     button:hover {
-      background: #084cd3;
+      background-color: #025aa5;
     }
-
-    #runButtons button {
-      margin: 5px;
-      background: #198754;
+    .run-buttons button {
+      width: 23%;
+      margin: 1%;
     }
-
-    #runButtons button:hover {
-      background: #146c43;
+    .scoreboard, .controls, .wicket, #summary, #history {
+      margin-top: 1.5em;
     }
-
     ul {
-      list-style: none;
+      list-style-type: none;
       padding: 0;
     }
-
-    #summary, #history {
-      margin-top: 20px;
+    li {
+      padding: 0.25em 0;
     }
-
-    .text-center {
-      text-align: center;
-    }
-
-    @media (max-width: 600px) {
-      .input-group {
-        flex-direction: column;
-      }
+    #history {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h1>🏏 Cricket Score Tracker</h1>
+  <div class="container">
+    <h1>🏏 Cricket Score App</h1>
 
-  <div class="card">
-    <div class="input-group">
-      <input id="playerName" placeholder="Enter Player Name">
+    <div>
+      <input id="playerName" placeholder="Player Name">
       <button onclick="addPlayer()">Add Player</button>
     </div>
 
-    <div class="input-group">
+    <div>
+      <label for="strikerSelect">Striker:</label>
       <select id="strikerSelect"></select>
     </div>
 
-    <div id="runButtons" class="text-center"></div>
-  </div>
-
-  <div class="card">
-    <h3>Scoreboard</h3>
-    <ul id="scoreboard"></ul>
-    <div class="text-center">
-      <button onclick="undoLastBall()">Undo Last Ball</button>
-      <button onclick="endInnings()">End Innings</button>
-      <button onclick="viewHistory()">View History</button>
+    <div class="controls">
+      <p><strong>Runs:</strong></p>
+      <div class="run-buttons" id="runButtons"></div>
     </div>
-  </div>
 
-  <div id="summary" class="card" style="display:none;"></div>
-  <div id="history" class="card" style="display:none;"></div>
+    <div class="wicket">
+      <h3>Wicket</h3>
+      <input id="wicketTaker" placeholder="Wicket Taker">
+      <button onclick="recordWicket()">Record Wicket</button>
+    </div>
+
+    <div class="scoreboard">
+      <h3>Scoreboard</h3>
+      <ul id="scoreboard"></ul>
+    </div>
+
+    <button onclick="undoLastBall()">Undo Last Ball</button>
+    <button onclick="endInnings()">End Innings</button>
+    <button onclick="viewHistory()">View History</button>
+
+    <div id="summary"></div>
+    <div id="history"></div>
+  </div>
 
   <script>
     let matchHistory = JSON.parse(localStorage.getItem('matchHistory')) || [];
-    let match = JSON.parse(localStorage.getItem('match')) || { players: {}, balls: [], striker: null };
+    let match = JSON.parse(localStorage.getItem('match')) || { players: {}, wickets: {}, balls: [], striker: null };
 
     function saveMatch() {
       localStorage.setItem('match', JSON.stringify(match));
@@ -149,6 +122,19 @@
       if (!striker) return alert('Please select a striker');
       match.players[striker] += runs;
       match.balls.push({ striker, runs });
+      if (runs % 2 === 1) changeStrike();
+      saveMatch();
+      updateScoreboard();
+    }
+
+    function recordWicket() {
+      const striker = document.getElementById('strikerSelect').value;
+      const taker = document.getElementById('wicketTaker').value.trim();
+      if (!striker || !taker) return alert('Select striker and enter wicket taker');
+      if (!match.wickets[taker]) match.wickets[taker] = 0;
+      match.wickets[taker]++;
+      match.balls.push({ striker, runs: 0, wicketBy: taker });
+      document.getElementById('wicketTaker').value = '';
       saveMatch();
       updateScoreboard();
     }
@@ -157,6 +143,7 @@
       const last = match.balls.pop();
       if (!last) return;
       match.players[last.striker] -= last.runs;
+      if (last.wicketBy) match.wickets[last.wicketBy]--;
       saveMatch();
       updateScoreboard();
     }
@@ -169,6 +156,11 @@
         totalRuns += score;
         const li = document.createElement('li');
         li.textContent = `${player}: ${score} runs`;
+        ul.appendChild(li);
+      }
+      for (const [taker, count] of Object.entries(match.wickets || {})) {
+        const li = document.createElement('li');
+        li.textContent = `${taker}: ${count} wickets`;
         ul.appendChild(li);
       }
       const total = document.createElement('li');
@@ -185,8 +177,10 @@
       for (const [player, score] of Object.entries(match.players)) {
         summaryHTML += `<li>${player}: ${score} runs</li>`;
       }
+      for (const [taker, count] of Object.entries(match.wickets || {})) {
+        summaryHTML += `<li>${taker}: ${count} wickets</li>`;
+      }
       summaryHTML += '</ul>';
-
       const maxScorer = Object.entries(match.players).reduce((a, b) => b[1] > a[1] ? b : a, ['', 0]);
       summaryHTML += `<p><strong>Top Scorer:</strong> ${maxScorer[0]} (${maxScorer[1]} runs)</p>`;
 
@@ -194,7 +188,7 @@
       document.getElementById('summary').style.display = 'block';
 
       localStorage.removeItem('match');
-      match = { players: {}, balls: [], striker: null };
+      match = { players: {}, wickets: {}, balls: [], striker: null };
       document.getElementById('strikerSelect').innerHTML = '';
       updateScoreboard();
     }
@@ -206,7 +200,6 @@
         container.style.display = 'block';
         return;
       }
-
       let historyHTML = `<h3>Match History</h3>`;
       matchHistory.forEach((match, index) => {
         historyHTML += `<div style="margin-bottom: 1em;">
@@ -215,9 +208,11 @@
         for (const [player, score] of Object.entries(match.players)) {
           historyHTML += `<li>${player}: ${score} runs</li>`;
         }
+        for (const [taker, count] of Object.entries(match.wickets || {})) {
+          historyHTML += `<li>${taker}: ${count} wickets</li>`;
+        }
         historyHTML += `</ul></div>`;
       });
-
       container.innerHTML = historyHTML;
       container.style.display = 'block';
     }
@@ -231,6 +226,14 @@
         btn.onclick = () => recordRun(i);
         runButtonsDiv.appendChild(btn);
       }
+    }
+
+    function changeStrike() {
+      const select = document.getElementById('strikerSelect');
+      if (select.options.length < 2) return;
+      const currentIndex = select.selectedIndex;
+      const newIndex = currentIndex === 0 ? 1 : 0;
+      select.selectedIndex = newIndex;
     }
 
     window.onload = () => {
